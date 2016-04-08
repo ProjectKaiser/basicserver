@@ -1,0 +1,102 @@
+ext.tf_version = '1.0'
+ext.tf_release = false
+ext.tf_vendor = 'Triniforce.com'
+
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: 'eclipse'
+apply plugin: 'war'
+
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
+[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
+
+/// Project configuration is used for Maven deploy:
+group = 'com.triniforce.tf-basic-server'
+
+version = tf_version + (tf_release ? '' : '-SNAPSHOT')
+
+
+// Get dynamic environment settings
+apply from: 'config.gradle'
+
+defaultTasks 'clean', 'ide'
+
+repositories {
+	
+	maven {
+		url MavenResolveUrl
+		credentials(PasswordCredentials) {
+			username = MavenUsername
+			password = MavenPassword
+		}
+
+	}
+}
+
+processResources {
+	from('src') {
+		include '**/*.properties'
+		include '**/*.wiki'
+		include '**/*.bsh'
+	}
+}
+
+configurations {
+	providedCompile
+}
+
+dependencies {
+		compile(group: 'com.triniforce.tf-server-toolkit', name: 'tf-server-toolkit', version: '46.0-SNAPSHOT')
+
+}
+
+sourceSets.main.compileClasspath += configurations.providedCompile
+sourceSets.test.compileClasspath += configurations.providedCompile
+sourceSets.test.runtimeClasspath += configurations.providedCompile
+
+sourceSets {
+	main.java.srcDirs = ['src']
+	test.java.srcDirs = ['test', 'investigation']
+}
+
+tasks.eclipse.dependsOn(cleanEclipse)
+eclipse {
+	classpath {
+		downloadJavadoc = true
+		plusConfigurations += [configurations.providedCompile]
+	}
+	jdt.file.withProperties{
+		it['org.eclipse.jdt.core.compiler.problem.rawTypeReference']='ignore'
+		it['org.eclipse.jdt.core.compiler.problem.uncheckedTypeOperation']='ignore'
+	}
+}
+
+eclipseJdt << {
+	file('.settings/org.eclipse.core.resources.prefs').write(
+	  'eclipse.preferences.version=1\n' +
+	  'encoding/<project>=UTF-8\n'
+	)
+}
+
+task ide(dependsOn: tasks.eclipse) {
+	group = 'IDE'
+	description = 'preparing for work in the development environment'
+}
+
+
+uploadArchives {
+	repositories.mavenDeployer {
+		uniqueVersion = false
+		repository(url: MavenPublishUrl) {
+			authentication(userName: MavenPublishUsername, password: MavenPublishPassword)
+		}
+		snapshotRepository(url: MavenPublishSnapshotUrl) {
+			authentication(userName: MavenPublishUsername, password: MavenPublishPassword)
+		}
+	}
+}
+
+war {
+	from 'war'
+}
