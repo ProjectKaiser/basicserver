@@ -34,6 +34,15 @@ repositories {
 	}
 }
 
+configurations.all {
+	resolutionStrategy {
+		// don't cache changing modules at all
+		cacheDynamicVersionsFor 0, 'seconds'
+		cacheChangingModulesFor 0, 'seconds'
+	}
+}
+
+
 processResources {
 	from('src') {
 		include '**/*.properties'
